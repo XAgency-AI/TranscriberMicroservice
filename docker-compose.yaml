@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  transcription-service:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./transcriptions:/app/transcriptions
+    environment:
+      - GPT_API_KEY=${GPT_API_KEY}
+      - BASE_DIR=/app
