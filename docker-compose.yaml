@@ -4,9 +4,13 @@ services:
   transcription-service:
     build: .
     ports:
-      - "8000:8000"
+      - "4004:4004"
     volumes:
       - ./transcriptions:/app/transcriptions
     environment:
       - GPT_API_KEY=${GPT_API_KEY}
-      - BASE_DIR=/app
+      - BASE_DIR=${BASE_DIR}
+    command: ["uvicorn", "core.main:create_app", "--host", "0.0.0.0", "--port", "4004", "--reload"]
+    expose:
+      - 4004
+    restart: unless-stopped
