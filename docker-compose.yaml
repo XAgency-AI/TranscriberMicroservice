@@ -3,10 +3,9 @@ version: '3.8'
 services:
   transcription-service:
     build: .
+    container_name: transcription-service
     ports:
       - "4004:4004"
-    volumes:
-      - ./transcriptions:/app/transcriptions
     environment:
       - GPT_API_KEY=${GPT_API_KEY}
       - BASE_DIR=${BASE_DIR}

@@ -1,6 +1,8 @@
-fastapi
-uvicorn
-pydub
-whisper
-loguru
-pre-commit
+aiofiles==23.2.1
+fastapi==0.111.0
+uvicorn==0.30.0
+pydub==0.25.1
+openai-whisper==20231117
+loguru==0.6.0
+pre-commit==3.1.0
+pydantic-settings==2.2.0
