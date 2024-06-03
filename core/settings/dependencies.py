@@ -1,6 +1,6 @@
 from fastapi import Depends
 
-from core.config import settings
+from core.settings.config import settings
 from core.services.transcriber import TranscriptionService
 
 from loguru import logger

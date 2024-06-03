@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, File, UploadFile, HTTPException
 from loguru import logger
 
 from core.services.transcriber import TranscriptionService
-from core.dependencies import get_transcription_service
+from core.settings.dependencies import get_transcription_service
 
 
 router = APIRouter(tags=['Transcriptions'])
