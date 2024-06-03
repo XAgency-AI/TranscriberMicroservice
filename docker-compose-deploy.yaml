@@ -1,0 +1,27 @@
+version: '3'
+
+services:
+  transcription-service:
+    build:
+      context: .
+    container_name: transcription-service
+    command: uvicorn core.main:create_app --host 0.0.0.0 --port 4004 --reload
+    ports:
+      - "4004:4004"
+    environment:
+      - GPT_API_KEY=${GPT_API_KEY}
+      - BASE_DIR=${BASE_DIR}
+    expose:
+      - 4004
+    networks:
+      - default
+      - front-proxy
+    labels:
+      caddy: https://${HOST_DNS_NAME}
+      caddy.reverse_proxy: "{{upstreams http 4004}}"
+    restart: always
+
+
+networks:
+  front-proxy:
+    external: true
