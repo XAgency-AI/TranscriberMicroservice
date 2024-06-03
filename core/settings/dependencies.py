@@ -1,6 +1,6 @@
 from fastapi import Depends
 
-from core.settings.config import settings
+from core.settings.config import get_settings
 from core.services.transcriber import TranscriptionService
 
 from loguru import logger
@@ -13,6 +13,7 @@ def get_api_key() -> str:
     Returns:
         str: The GPT API key.
     """
+    settings = get_settings()
     return settings.GPT_API_KEY
 
 
@@ -28,6 +29,7 @@ def get_transcription_service(api_key: str = Depends(get_api_key)) -> Transcript
 
     """
     try:
+        settings = get_settings()
         return TranscriptionService(api_key, settings.TRANSCRIPTION_DIRECTORY)
     except Exception as e:
         logger.error(f"Error initializing TranscriptionService: {e}")
