@@ -21,6 +21,16 @@ services:
       caddy.reverse_proxy: "{{upstreams http 4004}}"
     restart: always
 
+  redis:
+    image: "redis:alpine"
+    expose:
+      - 6379
+    volumes:
+      - ./volumes/redis:/data
+    command: redis-server --appendonly yes
+    networks:
+      - default
+    restart: always
 
 networks:
   front-proxy:
