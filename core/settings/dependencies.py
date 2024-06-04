@@ -30,6 +30,9 @@ def get_transcription_service(api_key: str = Depends(get_api_key)) -> Transcript
     """
     try:
         settings = get_settings()
-        return TranscriptionService(api_key, settings.TRANSCRIPTION_DIRECTORY)
+        return TranscriptionService(api_key,
+                                    settings.TRANSCRIPTION_DIRECTORY,
+                                    redis_host=settings.REDIS_HOST,
+                                    redis_port=settings.REDIS_PORT,)
     except Exception as e:
         logger.error(f"Error initializing TranscriptionService: {e}")
