@@ -45,3 +45,31 @@ async def create_transcription(
     except Exception as e:
         logger.error(f"An error occurred during transcription: {str(e)}")
         raise HTTPException(status_code=500, detail=f"An error occurred during transcription: {str(e)}")
+
+@router.post("/transcribe/youtube")
+async def transcribe_youtube_video(
+    url: str,
+    return_only_vtt_transcription: bool = False,
+    transcription_service: TranscriptionService = Depends(get_transcription_service)
+) -> dict:
+    """
+    Endpoint to transcribe a YouTube video.
+
+    Args:
+        url (str): The URL of the YouTube video.
+        return_only_vtt_transcription (bool): Whether to return only the VTT transcription.
+        transcription_service (TranscriptionService): The transcription service dependency.
+
+    Returns:
+        dict: A dictionary containing the transcription.
+    """
+    try:
+        logger.info(f"Received YouTube URL for transcription: {url}")
+        transcription = transcription_service.transcribe_youtube_video(url, return_only_vtt_transcription)
+        logger.info(f"Transcription completed for YouTube URL: {url}")
+        return {"transcription": transcription}
+    except Exception as e:
+        logger.error(f"An error occurred during transcription: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"An error occurred during transcription: {str(e)}")
+    
+    
