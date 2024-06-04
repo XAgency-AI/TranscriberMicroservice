@@ -3,6 +3,7 @@ import re
 import tempfile
 
 from loguru import logger
+from pytube import YouTube
 
 from core.services.whisper import WhisperTranscriber
 
@@ -77,6 +78,30 @@ class TranscriptionService:
         try:
             transcription = self.transcribe_one_file(temp_file_path)
             logger.info("Transcription completed for temporary file: {}", filename)
+            return transcription
+        finally:
+            os.remove(temp_file_path)
+            logger.info("Temporary file deleted: {}", temp_file_path)
+
+    def transcribe_youtube_video(self, url: str, return_only_vtt_transcription: bool = False) -> str:
+        """
+        Download and transcribe a YouTube video.
+
+        Args:
+            url (str): The URL of the YouTube video.
+            return_only_vtt_transcription (bool): Whether to return only the VTT transcription.
+
+        Returns:
+            str: The transcribed text with timestamps.
+        """
+        logger.info("Downloading YouTube video: {}", url)
+        yt = YouTube(url)
+        stream = yt.streams.filter(only_audio=True).first()
+        temp_file_path = stream.download(output_path=self.directory_path)
+        
+        try:
+            transcription = self.transcribe_one_file(temp_file_path, return_only_vtt_transcription)
+            logger.info("Transcription completed for YouTube video: {}", url)
             return transcription
         finally:
             os.remove(temp_file_path)
