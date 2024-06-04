@@ -1,25 +1,29 @@
+import hashlib
 import os
 import re
 import tempfile
+import redis
 
 from loguru import logger
 from pytube import YouTube
-
 from core.services.whisper import WhisperTranscriber
 
 
 class TranscriptionService:
-    def __init__(self, api_key: str, directory_path: str):
+    def __init__(self, api_key: str, directory_path: str, redis_host: str, redis_port: int):
         """
-        Initialize the TranscriptionService with the given API key and directory path.
+        Initialize the TranscriptionService with the given API key, directory path, and Redis connection.
 
         Args:
             api_key (str): The API key for the transcription service.
             directory_path (str): The directory path for temporary file storage.
+            redis_host (str): The Redis host.
+            redis_port (int): The Redis port.
         """
         self.api_key = api_key
         self.directory_path = directory_path
         self.transcriber = WhisperTranscriber(api_key=api_key, model_size="base.en")
+        self.redis_client = redis.Redis(host=redis_host, port=redis_port, decode_responses=True)
         logger.info("TranscriptionService initialized with directory path: {}", directory_path)
 
     @staticmethod
@@ -71,6 +75,15 @@ class TranscriptionService:
         Returns:
             str: The transcribed text.
         """
+        # Generate a hash of the content to use as a cache key
+        content_hash = hashlib.md5(content).hexdigest()
+        
+        # Check if the transcription is already cached
+        cached_transcription = self.redis_client.get(content_hash)
+        if cached_transcription:
+            logger.info("Returning cached transcription for file: {}", filename)
+            return cached_transcription
+    
         logger.info("Creating temporary file for transcription: {}", filename)
         with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(filename)[1], mode='wb') as temp_file:
             temp_file.write(content)
@@ -78,10 +91,14 @@ class TranscriptionService:
         try:
             transcription = self.transcribe_one_file(temp_file_path)
             logger.info("Transcription completed for temporary file: {}", filename)
+            
+            # Cache the transcription
+            self.redis_client.set(content_hash, transcription)
+            
             return transcription
         finally:
-            os.remove(temp_file_path)
-            logger.info("Temporary file deleted: {}", temp_file_path)
+                os.remove(temp_file_path)
+                logger.info("Temporary file deleted: {}", temp_file_path)
 
     def transcribe_youtube_video(self, url: str, return_only_vtt_transcription: bool = False) -> str:
         """
@@ -96,12 +113,22 @@ class TranscriptionService:
         """
         logger.info("Downloading YouTube video: {}", url)
         yt = YouTube(url)
+        video_id = yt.video_id
+
+        # Check if the transcription is already cached
+        cached_transcription = self.redis_client.get(video_id)
+        if cached_transcription:
+            logger.info("Returning cached transcription for video: {}", url)
+            return cached_transcription
+
         stream = yt.streams.filter(only_audio=True).first()
         temp_file_path = stream.download(output_path=self.directory_path)
         
         try:
             transcription = self.transcribe_one_file(temp_file_path, return_only_vtt_transcription)
             logger.info("Transcription completed for YouTube video: {}", url)
+            # Cache the transcription
+            self.redis_client.set(video_id, transcription)
             return transcription
         finally:
             os.remove(temp_file_path)
