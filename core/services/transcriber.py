@@ -1,4 +1,5 @@
 import hashlib
+import json
 import os
 import re
 import tempfile
@@ -71,7 +72,7 @@ class TranscriptionService:
         try:
             transcription_result = self.transcribe_one_file(temp_file_path)
             logger.info("Transcription completed for temporary file: {}", filename)
-            self.redis_client.set(content_hash, transcription_result)
+            self.redis_client.set(content_hash, json.dumps(transcription_result))
             return transcription_result
 
         finally:
@@ -94,7 +95,7 @@ class TranscriptionService:
         try:
             transcription = self.transcribe_one_file(temp_file_path, return_only_vtt_transcription)
             logger.info("Transcription completed for YouTube video: {}", url)
-            self.redis_client.set(video_id, transcription)
+            self.redis_client.set(video_id, json.dumps(transcription))
             return transcription
         
         finally:
