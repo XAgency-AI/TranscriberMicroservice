@@ -65,7 +65,8 @@ class TranscriptionService:
 
         if cached_transcription:
             logger.info("Returning cached transcription for file: {}", filename)
-            return cached_transcription
+            # Ensure the cached transcription is a JSON dictionary
+            return json.loads(cached_transcription)
 
         logger.info("Creating temporary file for transcription: {}", filename)
 
@@ -76,6 +77,7 @@ class TranscriptionService:
         try:
             transcription_result = self.transcribe_one_file(temp_file_path)
             logger.info("Transcription completed for temporary file: {}", filename)
+            # Store the result as a JSON string
             self.redis_client.set(content_hash, json.dumps(transcription_result))
             return transcription_result
 

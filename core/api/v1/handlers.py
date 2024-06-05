@@ -40,6 +40,10 @@ async def create_transcription(
             content=content, filename=file.filename,
         )
 
+        if not isinstance(transcription_result, dict):
+            logger.error(f"Invalid transcription result type: {type(transcription_result)}")
+            raise HTTPException(status_code=500, detail="Transcription result is not a valid dictionary")
+
         logger.info(f"Transcription completed for file: {file.filename}")
         return transcription_result
     except Exception as e:
