@@ -24,7 +24,7 @@ class TranscriptionService:
         logger.info("Parsed combined transcriptions into {} segments", len(matches))
         return [(match[0], match[1]) for match in matches]
 
-    def transcribe_one_file(self, file: str, return_only_vtt_transcription: bool = False) -> str:
+    def transcribe_one_file(self, file: str, return_only_vtt_transcription: bool = True) -> str:
         if not file.endswith((".mp3", ".wav", ".m4a", ".mp4", ".flac", ".mp4")):
             logger.error("Unsupported file type: {}", file)
             raise ValueError(f"Unsupported file type: {file}")
