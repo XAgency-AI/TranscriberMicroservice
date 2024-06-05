@@ -22,7 +22,7 @@ async def create_transcription(
         transcription_service (TranscriptionService): The transcription service dependency.
 
     Returns:
-        dict: A dictionary containing the transcription and timestamps.
+        dict: A dictionary containing the transcription.
 
     Raises:
         HTTPException: If the file type is unsupported or an error occurs during transcription.
@@ -36,16 +36,12 @@ async def create_transcription(
             logger.error(f"Unsupported file type: {mime_type}")
             raise HTTPException(status_code=400, detail="Unsupported file type")
 
-        transcription_result = transcription_service.transcribe_media_content(
+        transcription = transcription_service.transcribe_media_content(
             content=content, filename=file.filename,
         )
 
-        if not isinstance(transcription_result, dict):
-            logger.error(f"Invalid transcription result type: {type(transcription_result)}")
-            raise HTTPException(status_code=500, detail="Transcription result is not a valid dictionary")
-
         logger.info(f"Transcription completed for file: {file.filename}")
-        return transcription_result
+        return {"transcription": transcription}
     except Exception as e:
         logger.error(f"An error occurred during transcription: {str(e)}")
         raise HTTPException(status_code=500, detail=f"An error occurred during transcription: {str(e)}")
