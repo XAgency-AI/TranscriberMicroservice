@@ -3,7 +3,6 @@ import json
 import os
 import re
 import tempfile
-import redis
 
 from loguru import logger
 from pytube import YouTube
@@ -11,11 +10,10 @@ from core.services.whisper import WhisperTranscriber
 
 
 class TranscriptionService:
-    def __init__(self, api_key: str, directory_path: str, redis_host: str, redis_port: int):
+    def __init__(self, api_key: str, directory_path: str):
         self.api_key = api_key
         self.directory_path = directory_path
         self.transcriber = WhisperTranscriber(api_key=api_key, model_size="base.en")
-        self.redis_client = redis.Redis(host=redis_host, port=redis_port, decode_responses=True)
         logger.info("TranscriptionService initialized with directory path: {}", directory_path)
 
     @staticmethod
@@ -26,7 +24,7 @@ class TranscriptionService:
         return [(match[0], match[1]) for match in matches]
 
     def transcribe_one_file(self, file: str, return_only_vtt_transcription: bool = False) -> dict:
-        if not file.endswith((".mp3", ".wav", ".m4a", ".mp4", ".flac", ".mp4")):
+        if not file.endswith((".mp3", ".wav", ".m4a", ".mp4", ".flac")):
             logger.error("Unsupported file type: {}", file)
             raise ValueError(f"Unsupported file type: {file}")
 
@@ -56,18 +54,10 @@ class TranscriptionService:
                 logger.error("Transcription failed: {}", error_message)
                 raise ValueError("Most likely the video doesn't contain audio.") from e
             else:
-                    logger.error("An unexpected error occurred during transcription: {}", error_message)
-                    raise RuntimeError("An unexpected error occurred during transcription.") from e
+                logger.error("An unexpected error occurred during transcription: {}", error_message)
+                raise RuntimeError("An unexpected error occurred during transcription.") from e
 
     def transcribe_media_content(self, content: bytes, filename: str) -> dict:
-        content_hash = hashlib.md5(content).hexdigest()
-        cached_transcription = self.redis_client.get(content_hash)
-
-        if cached_transcription:
-            logger.info("Returning cached transcription for file: {}", filename)
-            # Ensure the cached transcription is a JSON dictionary
-            return json.loads(cached_transcription)
-
         logger.info("Creating temporary file for transcription: {}", filename)
 
         with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(filename)[1], mode='wb') as temp_file:
@@ -77,8 +67,6 @@ class TranscriptionService:
         try:
             transcription_result = self.transcribe_one_file(temp_file_path)
             logger.info("Transcription completed for temporary file: {}", filename)
-            # Store the result as a JSON string
-            self.redis_client.set(content_hash, json.dumps(transcription_result))
             return transcription_result
 
         finally:
@@ -89,11 +77,6 @@ class TranscriptionService:
         logger.info("Downloading YouTube video: {}", url)
         yt = YouTube(url)
         video_id = yt.video_id
-        cached_transcription = self.redis_client.get(video_id)
-        
-        if cached_transcription:
-            logger.info("Returning cached transcription for video: {}", url)
-            return cached_transcription
 
         stream = yt.streams.filter(only_audio=True).first()
         temp_file_path = stream.download(output_path=self.directory_path)
@@ -101,7 +84,6 @@ class TranscriptionService:
         try:
             transcription = self.transcribe_one_file(temp_file_path, return_only_vtt_transcription)
             logger.info("Transcription completed for YouTube video: {}", url)
-            self.redis_client.set(video_id, json.dumps(transcription))
             return transcription
         
         finally:
