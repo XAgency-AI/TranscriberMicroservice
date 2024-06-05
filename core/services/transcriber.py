@@ -1,4 +1,5 @@
 import hashlib
+import json
 import os
 import re
 import tempfile
@@ -51,13 +52,13 @@ class TranscriptionService:
                 logger.error("An unexpected error occurred during transcription: {}", error_message)
                 raise RuntimeError("An unexpected error occurred during transcription.") from e
             
-    def transcribe_media_content(self, content: bytes, filename: str) -> str:
+    def transcribe_media_content(self, content: bytes, filename: str) -> list[tuple[str, str]]:
         content_hash = hashlib.md5(content).hexdigest()
         cached_transcription = self.redis_client.get(content_hash)
         
         if cached_transcription:
             logger.info("Returning cached transcription for file: {}", filename)
-            return cached_transcription
+            return json.loads(cached_transcription)
     
         logger.info("Creating temporary file for transcription: {}", filename)
         
@@ -68,7 +69,7 @@ class TranscriptionService:
         try:
             transcription = self.transcribe_one_file(temp_file_path)
             logger.info("Transcription completed for temporary file: {}", filename)
-            self.redis_client.set(content_hash, transcription)
+            self.redis_client.set(content_hash, json.dumps(transcription))
             return transcription
         
         finally:
