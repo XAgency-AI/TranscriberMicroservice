@@ -35,11 +35,12 @@ class TranscriptionService:
         try:
             transcribed_texts, formatted_timestamps, combined_transcriptions, _ = self.transcriber.transcribe_audio_with_timestamps(file)
 
+            # Format the transcription to match the desired output
+            formatted_transcription = []
+            for timestamp, text in zip(formatted_timestamps, transcribed_texts.split('\n')):
+                formatted_transcription.append(f"{timestamp} {text}")
+
             if return_only_vtt_transcription:
-                # Format the transcription to match the desired output
-                formatted_transcription = []
-                for timestamp, text in zip(formatted_timestamps, transcribed_texts.split('\n')):
-                    formatted_transcription.append(f"{timestamp} {text}")
                 logger.info("Returning only VTT transcription for file: {}", file)
                 return {"transcription": "\n".join(formatted_transcription)}
 
@@ -55,9 +56,9 @@ class TranscriptionService:
                 logger.error("Transcription failed: {}", error_message)
                 raise ValueError("Most likely the video doesn't contain audio.") from e
             else:
-                logger.error("An unexpected error occurred during transcription: {}", error_message)
-                raise RuntimeError("An unexpected error occurred during transcription.") from e
-        
+                    logger.error("An unexpected error occurred during transcription: {}", error_message)
+                    raise RuntimeError("An unexpected error occurred during transcription.") from e
+
     def transcribe_media_content(self, content: bytes, filename: str) -> dict:
         content_hash = hashlib.md5(content).hexdigest()
         cached_transcription = self.redis_client.get(content_hash)
