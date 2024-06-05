@@ -11,8 +11,8 @@ router = APIRouter(tags=['Transcriptions'])
 
 @router.post("/transcribe/")
 async def create_transcription(
-        file: UploadFile = File(...),
-        transcription_service: TranscriptionService = Depends(get_transcription_service)
+    file: UploadFile = File(...),
+    transcription_service: TranscriptionService = Depends(get_transcription_service)
 ) -> dict:
     """
     Endpoint to create a transcription from an uploaded audio or video file.
@@ -32,7 +32,7 @@ async def create_transcription(
         content = await file.read()
         mime_type, _ = mimetypes.guess_type(file.filename)
 
-        if mime_type not in ['audio/mpeg', 'audio/wav', 'audio/x-m4a', 'video/mp4', 'audio/flac']:
+        if mime_type not in ['audio/mpeg', 'audio/wav', 'audio/x-m4a', 'video/mp4', 'audio/flac', 'audio/mp4']:
             logger.error(f"Unsupported file type: {mime_type}")
             raise HTTPException(status_code=400, detail="Unsupported file type")
 
@@ -71,5 +71,3 @@ async def transcribe_youtube_video(
     except Exception as e:
         logger.error(f"An error occurred during transcription: {str(e)}")
         raise HTTPException(status_code=500, detail=f"An error occurred during transcription: {str(e)}")
-    
-    
