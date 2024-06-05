@@ -24,53 +24,56 @@ class TranscriptionService:
         logger.info("Parsed combined transcriptions into {} segments", len(matches))
         return [(match[0], match[1]) for match in matches]
 
-    def transcribe_one_file(self, file: str, return_only_vtt_transcription: bool = False) -> str:
+    def transcribe_one_file(self, file: str, return_only_vtt_transcription: bool = False) -> dict:
         if not file.endswith((".mp3", ".wav", ".m4a", ".mp4", ".flac", ".mp4")):
             logger.error("Unsupported file type: {}", file)
             raise ValueError(f"Unsupported file type: {file}")
-        
+
         logger.info("Starting transcription for file: {}", file)
-        
+
         try:
-            transcribed_texts, _, combined_transcriptions, _ = self.transcriber.transcribe_audio_with_timestamps(file)
-            
+            transcribed_texts, formatted_timestamps, combined_transcriptions, _ = self.transcriber.transcribe_audio_with_timestamps(file)
+
             if return_only_vtt_transcription:
                 logger.info("Returning only VTT transcription for file: {}", file)
-                return " \n[".join(combined_transcriptions.split(" ["))
-            
+                return {"transcription": " \n[".join(combined_transcriptions.split(" ["))}
+
             logger.info("Transcription completed for file: {}", file)
-            return transcribed_texts
-        
+            return {
+                "transcription": transcribed_texts,
+                "timestamps": formatted_timestamps
+            }
+
         except Exception as e:
             error_message = str(e)
-            
+
             if "Failed to load audio" in error_message or "Output file #0 does not contain any stream" in error_message:
                 logger.error("Transcription failed: {}", error_message)
                 raise ValueError("Most likely the video doesn't contain audio.") from e
             else:
                 logger.error("An unexpected error occurred during transcription: {}", error_message)
                 raise RuntimeError("An unexpected error occurred during transcription.") from e
-
-    def transcribe_media_content(self, content: bytes, filename: str) -> str:
+    
+    def transcribe_media_content(self, content: bytes, filename: str) -> dict:
         content_hash = hashlib.md5(content).hexdigest()
         cached_transcription = self.redis_client.get(content_hash)
-        
+
         if cached_transcription:
             logger.info("Returning cached transcription for file: {}", filename)
             return cached_transcription
-    
+
         logger.info("Creating temporary file for transcription: {}", filename)
-        
+
         with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(filename)[1], mode='wb') as temp_file:
             temp_file.write(content)
             temp_file_path = temp_file.name
-        
+
         try:
-            transcription = self.transcribe_one_file(temp_file_path)
+            transcription_result = self.transcribe_one_file(temp_file_path)
             logger.info("Transcription completed for temporary file: {}", filename)
-            self.redis_client.set(content_hash, transcription)
-            return transcription
-        
+            self.redis_client.set(content_hash, transcription_result)
+            return transcription_result
+
         finally:
             os.remove(temp_file_path)
             logger.info("Temporary file deleted: {}", temp_file_path)
